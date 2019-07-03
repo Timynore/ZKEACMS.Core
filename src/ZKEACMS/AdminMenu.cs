@@ -73,7 +73,7 @@ namespace ZKEACMS
             {
                 Title = "基础内容",
                 Icon = "glyphicon-tree-deciduous",
-                Order = 4,
+                Order = 5,
                 Children = new List<AdminMenu>
                 {
                     new AdminMenu
@@ -107,6 +107,14 @@ namespace ZKEACMS
                         Url = "~/admin/Theme",
                         Order = 4,
                         PermissionKey = PermissionKeys.ViewTheme
+                    },
+                    new AdminMenu
+                    {
+                        Title = "模板",
+                        Icon = "glyphicon-list-alt",
+                        Url = "~/admin/Template",
+                        Order = 4,
+                        PermissionKey = PermissionKeys.ViewTemplate
                     }
                 }
             },
