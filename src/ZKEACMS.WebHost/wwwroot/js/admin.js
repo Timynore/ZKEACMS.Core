@@ -110,10 +110,13 @@ $(function () {
 
 
 
-    if ($.fn.datepicker) {
+    if ($.fn.datetimepicker) {
         $(".Date").each(function () {
             if (!$(this).prop("readonly") && !$(this).prop("disabled")) {
-                $(this).datepicker({ language: "zh-CN", format: $(this).attr("JsDateFormat") });
+                $(this).datetimepicker({ locale: "zh-CN", format: $(this).attr("JsDateFormat") });
+                $(this).closest(".input-group").find(".glyphicon-calendar").click(function () {
+                    $(this).closest(".input-group").find("input").focus();
+                });
             }
         });
     }
@@ -332,8 +335,8 @@ $(function () {
                 $(this).attr("id", id.replace(/\_(\d+)\_/, "_" + index + "_"));
             }
 
-            if ($(this).hasClass("Date") && !$(this).prop("readonly") && !$(this).prop("disabled")) {
-                $(this).datepicker({ language: "zh-CN", format: $(this).attr("JsDateFormat") });
+            if ($(this).hasClass("Date") && !$(this).prop("readonly") && !$(this).prop("disabled") && $.fn.datetimepicker) {
+                $(this).datetimepicker({ locale: "zh-CN", format: $(this).attr("JsDateFormat") });
             }
         });
 
@@ -343,11 +346,10 @@ $(function () {
         });
         template.find(".ActionType").val($(this).data("value"));
         $(this).siblings(".items").append(template);
-
+        $(".dy-editor:visible", template).trigger("init-editor");
         var form = $(this).closest("form");
         form.removeData("validator").removeData("unobtrusiveValidation");
         $.validator.unobtrusive.parse(form[0]);
-
     }).on("click", ".input-group-collection .delete", function () {
         var form = $(this).closest("form");
         var allValid = true;
@@ -377,4 +379,5 @@ $(function () {
     if ($.fn.select2) {
         $("select[multiple='multiple']").select2();
     }
+    $(".dy-editor:visible").trigger("init-editor");
 });

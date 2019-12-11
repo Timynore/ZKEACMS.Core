@@ -36,14 +36,14 @@ namespace ZKEACMS.Article
                     new AdminMenu
                     {
                         Title = "文章列表",
-                        Url = "~/admin/Article",
+                        Url = "~/admin/article",
                         Icon = "glyphicon-align-justify",
                         PermissionKey = PermissionKeys.ViewArticle
                     },
                     new AdminMenu
                     {
                         Title = "文章类别",
-                        Url = "~/admin/ArticleType",
+                        Url = "~/admin/articletype",
                         Icon = "glyphicon-th-list",
                         PermissionKey = PermissionKeys.ViewArticleType
                     }
@@ -93,7 +93,7 @@ namespace ZKEACMS.Article
             //add by roc
             yield return new WidgetTemplateEntity<ArticleSpecialDetailWidgetService>
             {
-                Title = "特别文章内容",
+                Title = "特定文章内容",
                 GroupName = groupName,
                 PartialView = "Widget.ArticleDetail",
                 Thumbnail = "~/Plugins/ZKEACMS.Article/Content/Image/Widget.ArticleDetail.png",
@@ -137,17 +137,17 @@ namespace ZKEACMS.Article
             serviceCollection.Configure<ArticleListWidget>(option =>
             {
                 option.DataSourceLinkTitle = "文章";
-                option.DataSourceLink = "~/admin/Article";
+                option.DataSourceLink = "~/admin/article";
             });
             serviceCollection.Configure<ArticleTopWidget>(option =>
             {
                 option.DataSourceLinkTitle = "文章";
-                option.DataSourceLink = "~/admin/Article";
+                option.DataSourceLink = "~/admin/article";
             });
             serviceCollection.Configure<ArticleTypeWidget>(option =>
             {
                 option.DataSourceLinkTitle = "文章类别";
-                option.DataSourceLink = "~/admin/ArticleType";
+                option.DataSourceLink = "~/admin/articletype";
             });
             serviceCollection.ConfigureMetaData<ArticleDetailWidget, ArticleDetailWidgetMetaData>();
             serviceCollection.ConfigureMetaData<ArticleListWidget, ArticleListWidgetMeta>();

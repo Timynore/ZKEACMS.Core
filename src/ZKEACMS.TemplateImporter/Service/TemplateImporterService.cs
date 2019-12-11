@@ -23,7 +23,7 @@ namespace ZKEACMS.TemplateImporter.Service
 {
     public class TemplateImporterService : ITemplateImporterService
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IThemeService _themeService;
         private readonly ILayoutService _layoutService;
         private readonly IPageService _pageService;
@@ -34,7 +34,7 @@ namespace ZKEACMS.TemplateImporter.Service
         private static Regex StyleUrl = new Regex(@"url\(['|""]?([A-Za-z0-9_|\.|/|-]*)['|""]?\)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private const string ThemeFolder = "themes";
-        public TemplateImporterService(IHostingEnvironment hostingEnvironment,
+        public TemplateImporterService(IWebHostEnvironment hostingEnvironment,
             IThemeService themeService,
             ILayoutService layoutService,
             ILayoutHtmlService layoutHtmlService,
@@ -126,7 +126,7 @@ namespace ZKEACMS.TemplateImporter.Service
                 }
                 string title = document.PageName;
                 var titleNode = document.DocumentNode.SelectSingleNode("/html/head/title");
-                if (titleNode != null)
+                if (titleNode != null && titleNode.InnerText.IsNotNullAndWhiteSpace())
                 {
                     title = titleNode.InnerText.Trim();
                 }
@@ -147,8 +147,11 @@ namespace ZKEACMS.TemplateImporter.Service
                 {
                     page.DisplayOrder = ++index;
                 }
-                _pageService.Add(page);
-
+                var addPageResult = _pageService.Add(page);
+                if (addPageResult.HasViolation)
+                {
+                    throw new Exception(addPageResult.ErrorMessage);
+                }
                 #region Collect css
                 var cssLinks = document.DocumentNode.SelectNodes("//link[@rel='stylesheet']");
                 if (cssLinks != null)
@@ -184,27 +187,30 @@ namespace ZKEACMS.TemplateImporter.Service
                 #endregion
 
                 #region Collect Scripts
-                var scripts = document.DocumentNode.SelectNodes("//script");
                 StringBuilder pageScripts = new StringBuilder();
-                foreach (var item in scripts)
+                var scripts = document.DocumentNode.SelectNodes("//script");
+                if (scripts != null)
                 {
-                    string path = item.GetAttributeValue("src", string.Empty);
-                    if (path.IsNotNullAndWhiteSpace() && !isOutSidePath(path))
+                    foreach (var item in scripts)
                     {
-                        item.SetAttributeValue("src", ConvertToThemePath(themeName, path));
+                        string path = item.GetAttributeValue("src", string.Empty);
+                        if (path.IsNotNullAndWhiteSpace() && !isOutSidePath(path))
+                        {
+                            item.SetAttributeValue("src", ConvertToThemePath(themeName, path));
+                        }
+                        string fileName = Path.GetFileName(path);
+                        if (!jQueryFilter.IsMatch(fileName) && !BootstrapFilter.IsMatch(fileName))
+                        {
+                            pageScripts.AppendLine(item.OuterHtml.Trim());
+                        }
+                        item.Remove();
                     }
-                    string fileName = Path.GetFileName(path);
-                    if (!jQueryFilter.IsMatch(fileName) && !BootstrapFilter.IsMatch(fileName))
-                    {
-                        pageScripts.AppendLine(item.OuterHtml.Trim());
-                    }
-                    item.Remove();
                 }
                 #endregion
 
                 #region Collect Style
-                var innerStyles = document.DocumentNode.SelectNodes("//style");
                 StringBuilder pageStyle = new StringBuilder();
+                var innerStyles = document.DocumentNode.SelectNodes("//style");
                 if (innerStyles != null)
                 {
                     foreach (var item in innerStyles)
