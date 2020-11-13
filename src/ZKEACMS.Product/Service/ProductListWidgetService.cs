@@ -1,4 +1,7 @@
-/* http://www.zkea.net/ Copyright 2016 ZKEASOFT http://www.zkea.net/licenses */
+/* http://www.zkea.net/ 
+ * Copyright 2020 ZKEASOFT 
+ * http://www.zkea.net/licenses */
+
 using Easy.RepositoryPattern;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
@@ -16,7 +19,7 @@ using ZKEACMS.Page;
 
 namespace ZKEACMS.Product.Service
 {
-    public class ProductListWidgetService : WidgetService<ProductListWidget>
+    public class ProductListWidgetService : WidgetService<ProductListWidget>, IProductListWidgetService
     {
         private readonly IProductService _productService;
         private readonly IProductCategoryService _productCategoryService;
@@ -53,7 +56,7 @@ namespace ZKEACMS.Product.Service
             {
                 item.PageSize = 12;
             }
-            
+
             if (item.DetailPageUrl.IsNullOrWhiteSpace())
             {
                 item.DetailPageUrl = GetDetailPageUrl();
@@ -70,10 +73,11 @@ namespace ZKEACMS.Product.Service
             }
             return widget;
         }
-        public override WidgetViewModelPart Display(WidgetBase widget, ActionContext actionContext)
+        public override WidgetViewModelPart Display(WidgetDisplayContext widgetDisplayContext)
         {
-            ProductListWidget currentWidget = widget as ProductListWidget;
+            ProductListWidget currentWidget = widgetDisplayContext.Widget as ProductListWidget;
             IEnumerable<ProductEntity> products = null;
+            var actionContext = widgetDisplayContext.ActionContext;
             int pageIndex = actionContext.RouteData.GetPage();
             int cate = actionContext.RouteData.GetCategory();
             var pagin = new Pagination
@@ -103,19 +107,7 @@ namespace ZKEACMS.Product.Service
                 products = _productService.Get().Where(filter).OrderBy(m => m.OrderIndex).ThenByDescending(m => m.ID).ToList();
             }
 
-            var currentCategory = _productCategoryService.Get(cate == 0 ? currentWidget.ProductCategoryID : cate);
-            if (currentCategory != null)
-            {
-                var layout = actionContext.HttpContext.GetLayout();
-                if (layout != null && layout.Page != null)
-                {
-                    var page = layout.Page;
-                    //page.Title = (page.Title ?? "") + " - " + currentCategory.Title;
-                    page.Title = page.Title.IsNullOrWhiteSpace() ? currentCategory.Title : $"{page.Title} - {currentCategory.Title}";
-                }
-            }
-
-            return widget.ToWidgetViewModelPart(new ProductListWidgetViewModel
+            return widgetDisplayContext.ToWidgetViewModelPart(new ProductListWidgetViewModel
             {
                 Products = products,
                 Page = pagin,

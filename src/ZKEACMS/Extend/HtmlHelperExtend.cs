@@ -9,12 +9,28 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Easy.Mvc.Extend;
 using System;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Easy.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Razor;
 
 namespace ZKEACMS
 {
     public static class HtmlHelperExtend
     {
-        public static async Task<IHtmlContent> DisPlayWidget(this IHtmlHelper html, WidgetViewModelPart widget)
+        public static async Task<IHtmlContent> DisplayWidget(this IHtmlHelper html, WidgetViewModelPart widget)
+        {
+            if (widget.ViewModel != null)
+            {
+                var logger = html.ViewContext.HttpContext.RequestServices.GetService<ILogger<WidgetViewModelPart>>();
+                DateTime startTime = DateTime.Now;
+                var widgetResult = await html.PartialAsync("DisplayWidget", widget);
+                logger.LogInformation("Render Widget [{0}]: {1}ms", widget.Widget.ServiceTypeName, (DateTime.Now - startTime).TotalMilliseconds);
+                return widgetResult;
+            }
+            return await html.WidgetError();
+        }
+        public static async Task<IHtmlContent> DisplayWidgetPart(this IHtmlHelper html, WidgetViewModelPart widget)
         {
             if (widget.ViewModel != null)
             {
@@ -22,7 +38,6 @@ namespace ZKEACMS
             }
             return await html.WidgetError();
         }
-
         public static async Task<IHtmlContent> DesignWidget(this IHtmlHelper html, DesignWidgetViewModel viewModel)
         {
             return await html.PartialAsync("DesignWidget", viewModel);
@@ -54,7 +69,7 @@ namespace ZKEACMS
 
         private static bool IsOpenSelf(string link)
         {
-            return true;
+            return !link.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !link.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
         }
 
         public static async Task<IHtmlContent> WidgetError(this IHtmlHelper html)
@@ -76,11 +91,12 @@ namespace ZKEACMS
         }
         public static IHtmlContent SearchTerms(this IHtmlHelper html, bool createAble, string createAction)
         {
-            html.ViewBag.CreateAble = createAble;
-            html.ViewBag.CreateAction = createAction;
-            return html.Editor(string.Empty, "Search-Terms");
+            return html.Editor(string.Empty, "Search-Terms", new { CreateAble = createAble, CreateAction = createAction });
         }
-
+        public static IDisposable SearchTermsWithActions(this IHtmlHelper html, RazorPage page)
+        {
+            return new InjectEditorViewRender(page, html, "Search-Terms");
+        }
         public static IHtmlContent SearchItem(this IHtmlHelper html, ModelMetadata item)
         {
             var descriptor = item.GetViewDescriptor();
@@ -108,7 +124,7 @@ namespace ZKEACMS
                 {
                     return html.Editor(item.PropertyName, "Decimal");
                 }
-                else if (modelType == typeof(Int32))
+                else if (modelType == typeof(int))
                 {
                     return html.Editor(item.PropertyName, "Int32");
                 }

@@ -19,9 +19,9 @@ namespace ZKEACMS.Article.Service
         private const string ArticleTypeWidgetRelatedPageUrls = "ArticleTypeWidgetRelatedPageUrls";
         private readonly ConcurrentDictionary<string, object> _allRelatedUrlCache;
         private readonly IArticleTypeService _articleTypeService;
-        public ArticleTypeWidgetService(IWidgetBasePartService widgetService, 
-            IArticleTypeService articleTypeService, 
-            IApplicationContext applicationContext, 
+        public ArticleTypeWidgetService(IWidgetBasePartService widgetService,
+            IArticleTypeService articleTypeService,
+            IApplicationContext applicationContext,
             ICacheManager<ConcurrentDictionary<string, object>> cacheManager,
             CMSDbContext dbContext)
             : base(widgetService, applicationContext, dbContext)
@@ -45,10 +45,11 @@ namespace ZKEACMS.Article.Service
             DismissRelatedPageUrls();
         }
 
-        public override WidgetViewModelPart Display(WidgetBase widget, ActionContext actionContext)
+        public override WidgetViewModelPart Display(WidgetDisplayContext widgetDisplayContext)
         {
-            ArticleTypeWidget currentWidget = widget as ArticleTypeWidget;
+            ArticleTypeWidget currentWidget = widgetDisplayContext.Widget as ArticleTypeWidget;
             var types = _articleTypeService.Get(m => m.ParentID == currentWidget.ArticleTypeID);
+            var actionContext = widgetDisplayContext.ActionContext;
             int ac = actionContext.RouteData.GetCategory();
             ArticleType articleType = null;
             if (ac > 0)
@@ -62,17 +63,17 @@ namespace ZKEACMS.Article.Service
                     actionContext.RedirectTo($"{actionContext.RouteData.GetPath()}/{articleType.Url}", true);
                 }
             }
-            if (articleType != null)
+            if (articleType != null && articleType.SEOTitle.IsNotNullAndWhiteSpace())
             {
-                var layout = actionContext.HttpContext.GetLayout();
+                var layout = widgetDisplayContext.PageLayout;
                 if (layout != null && layout.Page != null)
                 {
-                    layout.Page.Title = articleType.SEOTitle ?? articleType.Title;
+                    layout.Page.Title = articleType.SEOTitle;
                     layout.Page.MetaKeyWorlds = articleType.SEOKeyWord;
                     layout.Page.MetaDescription = articleType.SEODescription;
                 }
             }
-            return widget.ToWidgetViewModelPart(new ArticleTypeWidgetViewModel
+            return widgetDisplayContext.ToWidgetViewModelPart(new ArticleTypeWidgetViewModel
             {
                 ArticleTypes = types,
                 ArticleTypeID = ac

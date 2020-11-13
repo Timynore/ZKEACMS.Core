@@ -21,6 +21,7 @@ using ZKEACMS.Widget;
 using ZKEACMS;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ZKEACMS.Filter
 {
@@ -80,14 +81,14 @@ namespace ZKEACMS.Filter
             if (page != null)
             {
                 var requestServices = filterContext.HttpContext.RequestServices;
-                var onPageExecuteds = requestServices.GetServices<IOnPageExecuted>();
+                var eventManager = requestServices.GetService<IEventManager>();
                 var layoutService = requestServices.GetService<ILayoutService>();
                 var widgetService = requestServices.GetService<IWidgetBasePartService>();
                 var applicationSettingService = requestServices.GetService<IApplicationSettingService>();
                 var themeService = requestServices.GetService<IThemeService>();
                 var widgetActivator = requestServices.GetService<IWidgetActivator>();
                 var ruleService = requestServices.GetService<IRuleService>();
-
+                var logger = requestServices.GetService<ILogger<WidgetAttribute>>();
                 LayoutEntity layout = layoutService.GetByPage(page);
                 layout.Page = page;
                 page.Favicon = applicationSettingService.Get(SettingKeys.Favicon, "~/favicon.ico");
@@ -97,13 +98,19 @@ namespace ZKEACMS.Filter
                 }
                 layout.CurrentTheme = themeService.GetCurrentTheme();
                 layout.ZoneWidgets = new ZoneWidgetCollection();
-                filterContext.HttpContext.TrySetLayout(layout);
                 widgetService.GetAllByPage(page).Each(widget =>
                     {
                         if (widget != null)
                         {
+                            DateTime startTime = DateTime.Now;
                             IWidgetPartDriver partDriver = widgetActivator.Create(widget);
-                            WidgetViewModelPart part = partDriver.Display(widget, filterContext);
+                            WidgetViewModelPart part = partDriver.Display(new WidgetDisplayContext
+                            {
+                                PageLayout = layout,
+                                ActionContext = filterContext,
+                                Widget = widget
+                            });
+                            logger.LogInformation("{0}.Display(): {1}ms", widget.ServiceTypeName, (DateTime.Now - startTime).TotalMilliseconds);
                             if (part != null)
                             {
                                 if (layout.ZoneWidgets.ContainsKey(part.Widget.ZoneID ?? UnknownZone))
@@ -133,8 +140,15 @@ namespace ZKEACMS.Filter
                     {
                         if (widget != null)
                         {
+                            DateTime startTime = DateTime.Now;
                             IWidgetPartDriver partDriver = widgetActivator.Create(widget);
-                            WidgetViewModelPart part = partDriver.Display(widget, filterContext);
+                            WidgetViewModelPart part = partDriver.Display(new WidgetDisplayContext
+                            {
+                                PageLayout = layout,
+                                ActionContext = filterContext,
+                                Widget = widget
+                            });
+                            logger.LogInformation("{0}.Display(): {1}ms", widget.ServiceTypeName, (DateTime.Now - startTime).TotalMilliseconds);
                             var zone = layout.Zones.FirstOrDefault(z => z.ZoneName == rules.First(m => m.RuleID == widget.RuleID).ZoneName);
                             if (part != null && zone != null)
                             {
@@ -163,10 +177,7 @@ namespace ZKEACMS.Filter
                     }
                     (filterContext.Controller as Controller).ViewData.Model = layout;
                 }
-                if (page.IsPublishedPage && onPageExecuteds != null)
-                {
-                    onPageExecuteds.Each(m => m.OnExecuted(page, filterContext.HttpContext));
-                }
+                eventManager.Trigger(Events.OnPageExecuted, layout);
 
                 layoutService.Dispose();
                 applicationSettingService.Dispose();
@@ -205,11 +216,8 @@ namespace ZKEACMS.Filter
                     applicationContext.Current.PageMode = GetPageViewMode();
                 }
             }
-            var _onPageExecutings = filterContext.HttpContext.RequestServices.GetServices<IOnPageExecuting>();
-            if (_onPageExecutings != null)
-            {
-                _onPageExecutings.Each(m => m.OnExecuting(filterContext.HttpContext));
-            }
+            var eventManager = filterContext.HttpContext.RequestServices.GetService<IEventManager>();
+            eventManager.Trigger(Events.OnPageExecuting, filterContext);
         }
 
         public bool Accept(ActionConstraintContext context)

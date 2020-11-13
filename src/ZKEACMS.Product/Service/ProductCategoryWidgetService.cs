@@ -44,9 +44,10 @@ namespace ZKEACMS.Product.Service
             base.DeleteWidget(widgetId);
             DismissRelatedPageUrls();
         }
-        public override WidgetViewModelPart Display(WidgetBase widget, ActionContext actionContext)
+        public override WidgetViewModelPart Display(WidgetDisplayContext widgetDisplayContext)
         {
-            ProductCategoryWidget currentWidget = widget as ProductCategoryWidget;
+            ProductCategoryWidget currentWidget = widgetDisplayContext.Widget as ProductCategoryWidget;
+            var actionContext = widgetDisplayContext.ActionContext;
             int cate = actionContext.RouteData.GetCategory();
             ProductCategory productCategory = null;
             if (cate > 0)
@@ -60,17 +61,17 @@ namespace ZKEACMS.Product.Service
                     actionContext.RedirectTo($"{actionContext.RouteData.GetPath()}/{productCategory.Url}", true);
                 }
             }
-            if (productCategory != null)
+            if (productCategory != null && productCategory.SEOTitle.IsNotNullAndWhiteSpace())
             {
-                var layout = actionContext.HttpContext.GetLayout();
+                var layout = widgetDisplayContext.PageLayout;
                 if (layout != null && layout.Page != null)
                 {
-                    layout.Page.Title = productCategory.SEOTitle ?? productCategory.Title;
+                    layout.Page.Title = productCategory.SEOTitle;
                     layout.Page.MetaKeyWorlds = productCategory.SEOKeyWord;
                     layout.Page.MetaDescription = productCategory.SEODescription;
                 }
             }
-            return widget.ToWidgetViewModelPart(new ProductCategoryWidgetViewModel
+            return widgetDisplayContext.ToWidgetViewModelPart(new ProductCategoryWidgetViewModel
             {
                 Categorys = _productCategoryService.Get(m => m.ParentID == currentWidget.ProductCategoryID),
                 CurrentCategory = cate
