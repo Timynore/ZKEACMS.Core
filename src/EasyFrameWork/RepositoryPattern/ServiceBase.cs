@@ -86,7 +86,7 @@ namespace Easy.RepositoryPattern
                 return action.Invoke();
             }
         }
-        protected ServiceResult<T> Validate(T item)
+        protected virtual ServiceResult<T> Validate(T item)
         {
             ServiceResult<T> serviceResult = new ServiceResult<T>();
             var entryType = typeof(T);

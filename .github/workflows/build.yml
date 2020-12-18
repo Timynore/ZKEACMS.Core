@@ -16,14 +16,33 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.301
+        dotnet-version: '5.0.x'
     - name: Install dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - name: restore publish tool
+    - name: Test EasyFrameWork
+      working-directory: ./test/EasyFrameWork.Test
+      run: dotnet test
+    - name: Install tools
+      run: |
+        dotnet tool install --global ZKEACMS.Publisher
+        dotnet tool install --global sqlite-exec
+    - name: Publish
       working-directory: ./src/ZKEACMS.WebHost
-      run: dotnet tool restore
-    - name: publish
-      working-directory: ./src/ZKEACMS.WebHost
-      run: dotnet tool run publish-zkeacms
+      run: publish-zkeacms
+    - name: Create database
+      run: |
+        mkdir ./src/ZKEACMS.WebHost/bin/Release/PublishOutput/App_Data
+        sqlite-exec -d ./src/ZKEACMS.WebHost/bin/Release/PublishOutput/App_Data/Database.sqlite -f ./Database/SQLite/ZKEACMS.sqlite.sql
+        cp -f ./Database/SQLite/appsettings.json ./src/ZKEACMS.WebHost/bin/Release/PublishOutput/appsettings.json
+    - name: Archive cms application
+      uses: actions/upload-artifact@v2
+      with:
+        name: Application
+        path: ./src/ZKEACMS.WebHost/bin/Release/PublishOutput
+    - name: Archive cms database
+      uses: actions/upload-artifact@v2
+      with:
+        name: Database
+        path: ./Database
